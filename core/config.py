@@ -13,6 +13,7 @@ EXCHANGE_LIMITS: dict[str, int] = {
     'hyperliquid': 500, 'paradex': 100, 'htx': 2000,
     'kraken': 720, 'kucoin': 1500, 'deribit': 1000,
     'bitmex': 750, 'phemex': 1000, 'coinbase': 300,
+    'bitmart': 200,'xt': 1000,'coinex': 1000,
 }
 DEFAULT_LIMIT = 500
 

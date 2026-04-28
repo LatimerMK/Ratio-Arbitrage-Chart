@@ -28,6 +28,14 @@ class ExchangeManager:
                     'defaultType': 'swap',
                     'fetchMarkets': ['linear'],
                 }
+            elif exchange_id == 'bitmart':
+                options['options'] = {'defaultType': 'swap'}
+
+            elif exchange_id == 'coinex':
+                options['options'] = {'defaultType': 'swap'}
+
+            elif exchange_id == 'xt':
+                options['options'] = {'defaultType': 'swap'}
             self.exchanges[exchange_id] = exch_class(options)
         return self.exchanges[exchange_id]
 
@@ -145,7 +153,35 @@ class ExchangeManager:
             print(f"⚠️  fetch_ratio: {e}")
             return None
 
-    def load_more_candles(
+    def load_more_candles(self, sym1, ex1, sym2, ex2, tf, before_ms):
+        # Біржі що ігнорують since — потребують post-filter
+        SINCE_BROKEN = {'coinex', 'xt'}
+
+        limit = min(self._max_limit(ex1), self._max_limit(ex2))
+        tf_ms = TF_MS.get(tf, 3_600_000)
+        since = int(before_ms) - limit * tf_ms
+
+        async def _load():
+            data = await self.fetch_ratio(sym1, ex1, sym2, ex2, tf, limit=limit, since=since)
+            if not data:
+                return []
+            cutoff = before_ms / 1000
+
+            # Якщо хоча б одна з бірж ігнорує since — фільтруємо тільки по cutoff
+            # (дані прийдуть "останні N", а не "з since" — scroll back не працює)
+            if ex1 in SINCE_BROKEN or ex2 in SINCE_BROKEN:
+                result = [c for c in data if c['time'] < cutoff]
+                if not result:
+                    # since ігнорується і всі свічки новіші — повернути порожньо
+                    # щоб UI зупинив scroll
+                    return []
+                return result
+
+            return [c for c in data if c['time'] < cutoff]
+
+        future = asyncio.run_coroutine_threadsafe(_load(), self.loop)
+        return future.result()
+    def load_more_candles111(
         self,
         sym1: str, ex1: str,
         sym2: str, ex2: str,
@@ -166,3 +202,4 @@ class ExchangeManager:
         import asyncio as _aio
         future = _aio.run_coroutine_threadsafe(_load(), self.loop)
         return future.result()
+
