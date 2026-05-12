@@ -222,6 +222,23 @@ HTML_CODE = """
         .go-btn:active { transform: scale(.97); }
         .go-btn:disabled { background: var(--bg4); color: var(--text2); cursor: not-allowed; }
 
+        .stop-btn {
+            background: none;
+            border: 1px solid var(--red);
+            color: var(--red);
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background .2s, color .2s, transform .1s;
+            letter-spacing: .04em;
+        }
+        .stop-btn:hover  { background: rgba(239,68,68,.15); }
+        .stop-btn:active { transform: scale(.97); }
+        .stop-btn:disabled { border-color: var(--border2); color: var(--text2); cursor: not-allowed; background: none; }
+
         /* ── CHART AREA ── */
         #chart-wrap {
             flex: 1;
@@ -443,6 +460,7 @@ HTML_CODE = """
             <option value="1d">1d</option>
         </select>
         <button class="go-btn" id="goBtn" onclick="startChart()">▶ GO</button>
+        <button class="stop-btn" id="stopBtn" onclick="stopChart()" disabled>⏹ STOP</button>
     </div>
 </div>
 
@@ -683,6 +701,15 @@ async function loadMoreCandles() {
     }
 }
 
+// ─── STOP CHART ─────────────────────────────────────────────────────
+function stopChart() {
+    if (updateInterval) { clearInterval(updateInterval); updateInterval = null; }
+    currentParams = null;
+    document.getElementById('stopBtn').disabled = true;
+    setStatus('', 'Зупинено');
+    showToast('⏹ Оновлення зупинено');
+}
+
 // ─── START CHART ────────────────────────────────────────────────────
 async function startChart() {
     const ex1 = document.getElementById('ex1').value;
@@ -706,6 +733,7 @@ async function startChart() {
     showLoading(`Завантаження ${sym1} / ${sym2}…`);
     setStatus('loading', 'Запит до бірж…');
     document.getElementById('goBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = true;
 
     try {
         const data = await pywebview.api.get_initial_data(sym1, ex1, sym2, ex2, tf);
@@ -742,6 +770,7 @@ async function startChart() {
                 }
             } catch(e) {}
         }, 1500);
+        document.getElementById('stopBtn').disabled = false;
 
     } catch(e) {
         setStatus('error', 'Помилка: ' + e);
