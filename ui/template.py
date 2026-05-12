@@ -239,6 +239,34 @@ HTML_CODE = """
         .stop-btn:active { transform: scale(.97); }
         .stop-btn:disabled { border-color: var(--border2); color: var(--text2); cursor: not-allowed; background: none; }
 
+        /* ── MULTIPLIER ── */
+        .mult-wrap {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .mult-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text2);
+            flex-shrink: 0;
+        }
+        .mult-input {
+            width: 64px;
+            background: var(--bg4);
+            border: 1px solid var(--border2);
+            color: var(--text);
+            border-radius: 6px;
+            padding: 5px 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            outline: none;
+            text-align: center;
+            transition: border-color .2s;
+        }
+        .mult-input:hover, .mult-input:focus { border-color: var(--accent); }
+
         /* ── CHART AREA ── */
         #chart-wrap {
             flex: 1;
@@ -406,6 +434,11 @@ HTML_CODE = """
                    oninput="filterMarkets(1)" onfocus="openDropdown(1)" autocomplete="off">
             <div class="market-dropdown" id="dropdown1"></div>
         </div>
+        <div class="mult-wrap">
+            <span class="mult-label">×</span>
+            <input class="mult-input" id="mult1" type="number" value="1" min="0.01" step="0.01"
+                   oninput="applyMultipliers()" title="Множник BUY">
+        </div>
     </div>
 
     <div class="divider"></div>
@@ -444,6 +477,11 @@ HTML_CODE = """
             <input class="market-search" id="search2" placeholder="Пошук ринку…"
                    oninput="filterMarkets(2)" onfocus="openDropdown(2)" autocomplete="off">
             <div class="market-dropdown" id="dropdown2"></div>
+        </div>
+        <div class="mult-wrap">
+            <span class="mult-label">×</span>
+            <input class="mult-input" id="mult2" type="number" value="1" min="0.01" step="0.01"
+                   oninput="applyMultipliers()" title="Множник SELL">
         </div>
     </div>
 
@@ -489,6 +527,7 @@ HTML_CODE = """
 let chart, candleSeries;
 let allMarkets = { 1: [], 2: [] };
 let selectedSymbol = { 1: null, 2: null };
+let rawCandles = [];             // сирі дані з бекенду (без множників)
 let loadedCandles = [];          // всі завантажені свічки (відсортовані за часом)
 let isLoadingMore = false;
 let noMoreData = false;
@@ -678,8 +717,8 @@ async function loadMoreCandles() {
             return;
         }
 
-        // Фільтруємо дублікати і мерджимо
-        const existingTimes = new Set(loadedCandles.map(c => c.time));
+        // Фільтруємо дублікати і мерджимо в rawCandles
+        const existingTimes = new Set(rawCandles.map(c => c.time));
         const unique = newData.filter(c => !existingTimes.has(c.time));
 
         if (unique.length === 0) {
@@ -687,9 +726,9 @@ async function loadMoreCandles() {
             return;
         }
 
-        loadedCandles = [...unique, ...loadedCandles];
-        loadedCandles.sort((a,b) => a.time - b.time);
-        candleSeries.setData(loadedCandles);
+        rawCandles = [...unique, ...rawCandles];
+        rawCandles.sort((a,b) => a.time - b.time);
+        applyMultipliers();
 
         updateCandleCount();
         setStatus('live', `+${unique.length} свічок | всього: ${loadedCandles.length}`);
@@ -701,10 +740,38 @@ async function loadMoreCandles() {
     }
 }
 
+// ─── MULTIPLIERS ─────────────────────────────────────────────────────
+function getMultipliers() {
+    const m1 = parseFloat(document.getElementById('mult1').value) || 1;
+    const m2 = parseFloat(document.getElementById('mult2').value) || 1;
+    return { m1, m2 };
+}
+
+function applyMult(candle, m1, m2) {
+    const k = m1 / m2;
+    return {
+        time:  candle.time,
+        open:  candle.open  * k,
+        high:  candle.high  * k,
+        low:   candle.low   * k,
+        close: candle.close * k,
+    };
+}
+
+function applyMultipliers() {
+    if (!rawCandles.length) return;
+    const { m1, m2 } = getMultipliers();
+    loadedCandles = rawCandles.map(c => applyMult(c, m1, m2));
+    candleSeries.setData(loadedCandles);
+    const last = loadedCandles[loadedCandles.length - 1];
+    if (last) document.getElementById('legend-ratio').innerText = last.close.toFixed(6);
+}
+
 // ─── STOP CHART ─────────────────────────────────────────────────────
 function stopChart() {
     if (updateInterval) { clearInterval(updateInterval); updateInterval = null; }
     currentParams = null;
+    rawCandles = [];
     document.getElementById('stopBtn').disabled = true;
     setStatus('', 'Зупинено');
     showToast('⏹ Оновлення зупинено');
@@ -724,6 +791,7 @@ async function startChart() {
     // Зупиняємо старий інтервал
     if (updateInterval) { clearInterval(updateInterval); updateInterval = null; }
     noMoreData = false;
+    rawCandles = [];
     loadedCandles = [];
 
     currentParams = { sym1, sym2, ex1, ex2, tf };
@@ -744,11 +812,11 @@ async function startChart() {
             return;
         }
 
-        loadedCandles = data;
-        candleSeries.setData(data);
+        rawCandles = data;
+        applyMultipliers();
         chart.timeScale().fitContent();
 
-        const last = data[data.length - 1];
+        const last = loadedCandles[loadedCandles.length - 1];
         document.getElementById('legend-ratio').innerText = last.close.toFixed(6);
         updateCandleCount();
         setStatus('live', `${ex1}:${sym1} ÷ ${ex2}:${sym2} | ${tf}`);
@@ -759,14 +827,21 @@ async function startChart() {
             try {
                 const upd = await pywebview.api.get_update(sym1, ex1, sym2, ex2, tf);
                 if (upd && upd.time >= lastTs) {
-                    candleSeries.update(upd);
                     lastTs = upd.time;
-                    document.getElementById('legend-ratio').innerText = upd.close.toFixed(6);
+                    const { m1, m2 } = getMultipliers();
+                    const updScaled = applyMult(upd, m1, m2);
+                    candleSeries.update(updScaled);
+                    document.getElementById('legend-ratio').innerText = updScaled.close.toFixed(6);
 
-                    // Оновлюємо або додаємо останню свічку в loadedCandles
-                    const idx = loadedCandles.findIndex(c => c.time === upd.time);
-                    if (idx >= 0) loadedCandles[idx] = upd;
-                    else { loadedCandles.push(upd); updateCandleCount(); }
+                    // Оновлюємо або додаємо останню свічку в rawCandles
+                    const idx = rawCandles.findIndex(c => c.time === upd.time);
+                    if (idx >= 0) rawCandles[idx] = upd;
+                    else { rawCandles.push(upd); }
+
+                    // Синхронізуємо loadedCandles
+                    const idxL = loadedCandles.findIndex(c => c.time === updScaled.time);
+                    if (idxL >= 0) loadedCandles[idxL] = updScaled;
+                    else { loadedCandles.push(updScaled); updateCandleCount(); }
                 }
             } catch(e) {}
         }, 1500);
