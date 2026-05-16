@@ -3,3 +3,6 @@
 .env
 markets_cache/*
 __pycache__
+
+build
+dist
