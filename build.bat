@@ -1,48 +1,43 @@
 @echo off
 :: ─────────────────────────────────────────────────────────────
-:: build.bat — збірка Tick Chart Pro у .exe
-:: Запускати з папки deploy\: .\build.bat
-:: Версія береться з version.txt — змінюй тільки там
+:: build.bat — Build Ratio Arbitrage Chart into .exe
+:: Run from the project root: .\build.bat
+:: Version is read from version.txt — change it only there
 :: ─────────────────────────────────────────────────────────────
 
-:: Читаємо версію з version.txt
+:: Read version from version.txt
 set /p APP_VERSION=<version.txt
-set APP_NAME=TickChartPro_%APP_VERSION%
+set APP_NAME=RatioArbitrageChart_%APP_VERSION%
 
-:: Активуємо .venv з кореня проекту
-echo [BUILD] Активація віртуального середовища...
-call ..\.venv\Scripts\activate.bat
+:: Activate .venv from the project root
+echo [BUILD] Activating virtual environment...
+call .venv\Scripts\activate
 if errorlevel 1 (
-    echo [ERROR] Не вдалося активувати .venv. Перевір шлях: ..\.venv\Scripts\activate.bat
+    echo [ERROR] Failed to activate .venv. Check path: .venv\Scripts\activate.bat
     pause
     exit /b 1
 )
 
-echo [BUILD] Встановлення залежностей з requirements.txt...
-pip install -r ..\requirements.txt --quiet
+echo [BUILD] Installing dependencies from requirements.txt...
+pip install -r requirements.txt --quiet
 
-echo [BUILD] Встановлення/оновлення PyInstaller...
+echo [BUILD] Installing/updating PyInstaller...
 pip install pyinstaller --quiet
 
-echo [BUILD] Збірка %APP_NAME%...
-pyinstaller tick_chart.spec --clean --noconfirm
+echo [BUILD] Building %APP_NAME%...
+pyinstaller ratio_arb_chart.spec --clean --noconfirm
 if errorlevel 1 (
-    echo [ERROR] Помилка збірки PyInstaller
+    echo [ERROR] PyInstaller build failed
     pause
     exit /b 1
 )
 
-:: Копіюємо конфіг-файли поруч з .exe
-echo [BUILD] Копіювання конфіг-файлів...
-if not exist "dist\%APP_NAME%\config.json"  copy /Y "config.json"  "dist\%APP_NAME%\"
-if not exist "dist\%APP_NAME%\proxies.json" copy /Y "proxies.json" "dist\%APP_NAME%\"
-
-:: Прибираємо тимчасову папку build\
-echo [BUILD] Очищення тимчасової папки build\...
+:: Remove temporary build\ folder
+echo [BUILD] Cleaning up temporary build\ folder...
 rmdir /s /q build
 
 echo.
-echo [BUILD] Готово!
-echo Результат: dist\%APP_NAME%\%APP_NAME%.exe
+echo [BUILD] Done!
+echo Output: dist\%APP_NAME%\%APP_NAME%.exe
 echo.
 pause

@@ -1,18 +1,18 @@
-# tick_chart.spec
+# ratio_arb_chart.spec
 # ─────────────────────────────────────────────────────────────
-# PyInstaller spec для Tick Chart Pro
-# Запуск збірки: pyinstaller tick_chart.spec
-# Версія береться з version.txt — змінюй тільки там
+# PyInstaller spec for Ratio Arbitrage Chart
+# Run build: pyinstaller ratio_arb_chart.spec
+# Version is read from version.txt — change it only there
 # ─────────────────────────────────────────────────────────────
 
 import os
 block_cipher = None
 
-# Читаємо версію з version.txt
+# Read version from version.txt
 with open('version.txt', 'r') as _f:
     APP_VERSION = _f.read().strip()
 
-APP_NAME    = f"TickChartPro_{APP_VERSION}"
+APP_NAME    = f"RatioArbitrageChart_{APP_VERSION}"
 PROJECT_DIR = os.path.abspath('.')
 
 a = Analysis(
@@ -20,20 +20,14 @@ a = Analysis(
     pathex=[PROJECT_DIR],
     binaries=[],
     datas=[
-        # Вбудовані ресурси — потрапляють в _MEIPASS
-        ('index_main.html', '.'),
-        ('style.css',       '.'),
-        ('script.js',       '.'),
-        ('alert_sound',     'alert_sound'),
-        ('version.txt',     '.'),
+        # Bundled resources — placed into _MEIPASS
+        ('core',        'core'),
+        ('ui',          'ui'),
+        ('version.txt', '.'),
     ],
     hiddenimports=[
-        # pywebview backends для Windows
+        # pywebview backend for Windows
         'webview.platforms.winforms',
-        # python-socks
-        'python_socks',
-        'python_socks.async_',
-        'python_socks.async_.asyncio',
         # aiohttp
         'aiohttp',
         'aiohttp.connector',
@@ -60,12 +54,12 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,       # без консольного вікна
+    console=False,      # no console window
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',   # розкоментуй якщо є іконка
+    icon='icon.ico',
 )
 
 coll = COLLECT(

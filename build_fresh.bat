@@ -1,79 +1,74 @@
 @echo off
 :: ─────────────────────────────────────────────────────────────
-:: build_fresh.bat — збірка з нуля (без існуючого .venv)
-:: Використовуй якщо щойно склонував проект з Git
-:: Запускати з папки deploy\: .\build_fresh.bat
-:: Версія береться з version.txt — змінюй тільки там
+:: build_fresh.bat — Clean build from scratch (no existing .venv)
+:: Use this if you just cloned the project from Git
+:: Run from the project root: .\build_fresh.bat
+:: Version is read from version.txt — change it only there
 :: ─────────────────────────────────────────────────────────────
 
-:: Читаємо версію з version.txt
+:: Read version from version.txt
 set /p APP_VERSION=<version.txt
-set APP_NAME=TickChartPro_%APP_VERSION%
+set APP_NAME=RatioArbitrageChart_%APP_VERSION%
 
-:: Перевіряємо що Python доступний
-echo [BUILD] Перевірка Python...
+:: Check that Python is available
+echo [BUILD] Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python не знайдено. Встанови Python 3.10+ та додай до PATH.
+    echo [ERROR] Python not found. Install Python 3.10+ and add it to PATH.
     pause
     exit /b 1
 )
 
-:: Створюємо нове .venv в корені проекту якщо не існує
-echo [BUILD] Створення віртуального середовища .venv...
-if exist "..\.venv" (
-    echo [BUILD] .venv вже існує, пропускаємо створення...
+:: Create new .venv in the project root if it does not exist
+echo [BUILD] Creating virtual environment .venv...
+if exist ".venv" (
+    echo [BUILD] .venv already exists, skipping creation...
 ) else (
-    python -m venv ..\.venv
+    python -m venv .venv
     if errorlevel 1 (
-        echo [ERROR] Не вдалося створити .venv
+        echo [ERROR] Failed to create .venv
         pause
         exit /b 1
     )
 )
 
-:: Активуємо .venv
-echo [BUILD] Активація віртуального середовища...
-call ..\.venv\Scripts\activate.bat
+:: Activate .venv
+echo [BUILD] Activating virtual environment...
+call .venv\Scripts\activate
 if errorlevel 1 (
-    echo [ERROR] Не вдалося активувати .venv
+    echo [ERROR] Failed to activate .venv
     pause
     exit /b 1
 )
 
-:: Встановлюємо залежності
-echo [BUILD] Встановлення залежностей з requirements.txt...
-pip install -r ..\requirements.txt --quiet
+:: Install dependencies
+echo [BUILD] Installing dependencies from requirements.txt...
+pip install -r requirements.txt --quiet
 if errorlevel 1 (
-    echo [ERROR] Помилка встановлення залежностей
+    echo [ERROR] Failed to install dependencies
     pause
     exit /b 1
 )
 
-:: Встановлюємо PyInstaller
-echo [BUILD] Встановлення PyInstaller...
+:: Install PyInstaller
+echo [BUILD] Installing PyInstaller...
 pip install pyinstaller --quiet
 
-:: Збірка
-echo [BUILD] Збірка %APP_NAME%...
-pyinstaller tick_chart.spec --clean --noconfirm
+:: Build
+echo [BUILD] Building %APP_NAME%...
+pyinstaller ratio_arb_chart.spec --clean --noconfirm
 if errorlevel 1 (
-    echo [ERROR] Помилка збірки PyInstaller
+    echo [ERROR] PyInstaller build failed
     pause
     exit /b 1
 )
 
-:: Копіюємо конфіг-файли поруч з .exe
-echo [BUILD] Копіювання конфіг-файлів...
-if not exist "dist\%APP_NAME%\config.json"  copy /Y "config.json"  "dist\%APP_NAME%\"
-if not exist "dist\%APP_NAME%\proxies.json" copy /Y "proxies.json" "dist\%APP_NAME%\"
-
-:: Прибираємо тимчасову папку build\
-echo [BUILD] Очищення тимчасової папки build\...
+:: Remove temporary build\ folder
+echo [BUILD] Cleaning up temporary build\ folder...
 rmdir /s /q build
 
 echo.
-echo [BUILD] Готово!
-echo Результат: dist\%APP_NAME%\%APP_NAME%.exe
+echo [BUILD] Done!
+echo Output: dist\%APP_NAME%\%APP_NAME%.exe
 echo.
 pause
