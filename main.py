@@ -71,12 +71,15 @@ def setup_logging() -> str:
     file_handler.setLevel(numeric_level)
     file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
 
-    # Console handler — same output mirrored to original stdout
-    console_handler = logging.StreamHandler(sys.__stdout__)
-    console_handler.setLevel(numeric_level)
-    console_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+    # Console handler — only added when stdout exists (not None in frozen windowed .exe)
+    handlers = [file_handler]
+    if sys.__stdout__ is not None:
+        console_handler = logging.StreamHandler(sys.__stdout__)
+        console_handler.setLevel(numeric_level)
+        console_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+        handlers.append(console_handler)
 
-    logging.basicConfig(level=numeric_level, handlers=[file_handler, console_handler])
+    logging.basicConfig(level=numeric_level, handlers=handlers)
 
     # Silence ccxt's verbose HTTP loggers (request/response dumps) regardless of LOG_LEVEL.
     # These fire at DEBUG and would flood the output even at INFO if not capped explicitly.
@@ -90,20 +93,23 @@ def setup_logging() -> str:
     ):
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
 
-    # Redirect print() to a tee so it appears in both the log file and the console
+    # Redirect print() to a tee so it appears in both the log file and the console.
+    # In a frozen windowed .exe sys.__stdout__ / sys.__stderr__ are None — guard against that.
     class _Tee:
-        """Writes to both the log file and the original stream."""
+        """Writes to the log file and optionally to the original stream (if not None)."""
         def __init__(self, file, original):
             self._file = file
-            self._original = original
+            self._original = original  # may be None in windowed .exe build
 
         def write(self, data):
             self._file.write(data)
-            self._original.write(data)
+            if self._original is not None:
+                self._original.write(data)
 
         def flush(self):
             self._file.flush()
-            self._original.flush()
+            if self._original is not None:
+                self._original.flush()
 
     log_file = open(log_path, "a", encoding="utf-8", buffering=1)
     sys.stdout = _Tee(log_file, sys.__stdout__)
