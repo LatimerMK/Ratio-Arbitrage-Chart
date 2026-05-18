@@ -66,7 +66,8 @@ if errorlevel 1 (
 :: Remove temporary build\ folder
 echo [BUILD] Cleaning up temporary build\ folder...
 rmdir /s /q build
-
+echo [BUILD] Cleaning up temporary .venv\ folder...
+rmdir /s /q .venv
 echo.
 echo [BUILD] Done!
 echo Output: dist\%APP_NAME%\%APP_NAME%.exe
