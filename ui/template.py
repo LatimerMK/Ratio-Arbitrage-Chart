@@ -425,6 +425,7 @@ HTML_CODE = """
             <option value="bitmart">BitMart</option>
             <option value="coinex">CoinEx</option>
             <option value="xt">XT</option>
+            <option value="aster">AsterDEX</option>
         </select>
 
         <button class="refresh-btn" id="refresh1" onclick="refreshMarkets(1)" title="Оновити ринки">↻</button>
@@ -469,6 +470,7 @@ HTML_CODE = """
             <option value="bitmart">BitMart</option>
             <option value="coinex">CoinEx</option>
             <option value="xt">XT</option>
+            <option value="aster">AsterDEX</option>
         </select>
 
         <button class="refresh-btn" id="refresh2" onclick="refreshMarkets(2)" title="Оновити ринки">↻</button>

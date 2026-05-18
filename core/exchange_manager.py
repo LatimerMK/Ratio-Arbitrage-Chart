@@ -23,17 +23,22 @@ class ExchangeManager:
                     'defaultType': 'future',
                     'fetchMarkets': ['linear'],
                 }
+            elif exchange_id == 'okx':
+                # OKX defaults to spot; force swap/perps
+                options['options'] = {'defaultType': 'swap'}
             elif exchange_id == 'htx':
-                options['options'] = {
-                    'defaultType': 'swap',
-                    'fetchMarkets': ['linear'],
-                }
+                # HTX: defaultType swap only — fetchMarkets filter breaks HTX's endpoint routing
+                options['options'] = {'defaultType': 'swap'}
+            elif exchange_id == 'bitmex':
+                # BitMEX: perp contracts live under swap type
+                options['options'] = {'defaultType': 'swap'}
+            elif exchange_id == 'aster':
+                # AsterDEX (ccxt id: aster, added in ccxt 4.5.32) — futures-only DEX
+                options['options'] = {'defaultType': 'swap'}
             elif exchange_id == 'bitmart':
                 options['options'] = {'defaultType': 'swap'}
-
             elif exchange_id == 'coinex':
                 options['options'] = {'defaultType': 'swap'}
-
             elif exchange_id == 'xt':
                 options['options'] = {'defaultType': 'swap'}
             self.exchanges[exchange_id] = exch_class(options)
@@ -150,7 +155,7 @@ class ExchangeManager:
             return df[['time', 'open', 'high', 'low', 'close']].to_dict('records')
 
         except Exception as e:
-            print(f"⚠️  fetch_ratio: {e}")
+            print(f"[exchange_manager.fetch_ratio] Error: {ex1_id}:{sym1} / {ex2_id}:{sym2} tf={tf} — {e}")
             return None
 
     def load_more_candles(self, sym1, ex1, sym2, ex2, tf, before_ms):
@@ -181,25 +186,3 @@ class ExchangeManager:
 
         future = asyncio.run_coroutine_threadsafe(_load(), self.loop)
         return future.result()
-    def load_more_candles111(
-        self,
-        sym1: str, ex1: str,
-        sym2: str, ex2: str,
-        tf: str,
-        before_ms: int,
-    ) -> list:
-        limit = min(self._max_limit(ex1), self._max_limit(ex2))
-        tf_ms = TF_MS.get(tf, 3_600_000)
-        since = int(before_ms) - limit * tf_ms
-
-        async def _load():
-            data = await self.fetch_ratio(sym1, ex1, sym2, ex2, tf, limit=limit, since=since)
-            if not data:
-                return []
-            cutoff = before_ms / 1000
-            return [c for c in data if c['time'] < cutoff]
-
-        import asyncio as _aio
-        future = _aio.run_coroutine_threadsafe(_load(), self.loop)
-        return future.result()
-

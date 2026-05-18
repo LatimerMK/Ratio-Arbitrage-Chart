@@ -1,5 +1,12 @@
 from pathlib import Path
 
+# ── Logging ────────────────────────────────────────────────────────────
+# Controls verbosity of the application log (file + console).
+# "INFO"    — normal use: exchange init, market counts, errors only (recommended)
+# "DEBUG"   — full HTTP request/response dump from ccxt (use only for troubleshooting)
+# "WARNING" — errors and warnings only
+LOG_LEVEL = "INFO"
+
 # ── Markets cache ──────────────────────────────────────────────────────
 MARKETS_CACHE_DIR = Path("markets_cache")
 MARKETS_CACHE_DIR.mkdir(exist_ok=True)
@@ -13,7 +20,8 @@ EXCHANGE_LIMITS: dict[str, int] = {
     'hyperliquid': 500, 'paradex': 100, 'htx': 2000,
     'kraken': 720, 'kucoin': 1500, 'deribit': 1000,
     'bitmex': 750, 'phemex': 1000, 'coinbase': 300,
-    'bitmart': 200,'xt': 1000,'coinex': 1000,
+    'bitmart': 200, 'xt': 1000, 'coinex': 1000,
+    'aster': 1500,  # AsterDEX (ccxt id: aster) — max 1500 per docs
 }
 DEFAULT_LIMIT = 500
 
